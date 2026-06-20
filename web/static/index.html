@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Поиск авто — car-car.by</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0D0E12;
+    --bg2: #14151A;
+    --bg3: #1C1D24;
+    --bg4: #232530;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #F0F0F2;
+    --muted: #8A8B96;
+    --muted2: #5C5D68;
+    --accent: #E8FF47;
+    --accent-dim: rgba(232,255,71,0.12);
+    --price-down: #5CD68C;
+    --price-up: #FF7A7A;
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  /* ===== layout ===== */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(13,14,18,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+  }
+  .logo {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent); }
+
+  nav .total {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  nav .total b {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* ===== sidebar / filters ===== */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1.25rem;
+    position: sticky;
+    top: 57px;
+    align-self: start;
+    max-height: calc(100vh - 57px);
+    overflow-y: auto;
+  }
+  aside h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin: 1.5rem 0 0.6rem;
+  }
+  aside h3:first-child { margin-top: 0; }
+
+  .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.7rem; }
+  .field label { font-size: 12.5px; color: var(--muted); }
+  .field select, .field input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: 500 14px 'Inter', sans-serif;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field select:focus, .field input:focus { border-color: rgba(232,255,71,0.4); }
+  .field input::placeholder { color: var(--muted2); }
+  .field .num { font-family: 'JetBrains Mono', monospace; }
+
+  .range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .reset {
+    width: 100%;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem;
+    font: 500 13px 'Inter', sans-serif;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .reset:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* ===== main grid ===== */
+  main { padding: 1.5rem 2rem 4rem; }
+
+  .toolbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .result-count {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  .result-count small {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--muted);
+    margin-left: 0.5rem;
+  }
+  .sort-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: 500 13px 'Inter', sans-serif;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ===== car card ===== */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+
+  .card-img {
+    aspect-ratio: 4/3;
+    background: var(--bg3) center/cover no-repeat;
+    position: relative;
+  }
+  .card-source {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(13,14,18,0.85);
+    backdrop-filter: blur(8px);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+  }
+  .card-img.empty {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted2); font-size: 13px;
+  }
+
+  .card-body { padding: 0.85rem 1rem 1rem; flex: 1; display: flex; flex-direction: column; }
+  .card-title {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-specs {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+  .card-specs .num { color: var(--text); }
+  .card-bottom { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; }
+  .card-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: var(--accent);
+  }
+  .card-price small {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11.5px;
+    margin-left: 4px;
+  }
+  .card-region {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  /* ===== pagination ===== */
+  .pager {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pager button {
+    background: var(--bg2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    font: 500 13px 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pager button:hover:not(:disabled):not(.active) { border-color: var(--border-strong); }
+  .pager button.active {
+    background: var(--accent);
+    color: #0D0E12;
+    border-color: var(--accent);
+  }
+  .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pager .gap { color: var(--muted2); padding: 0.45rem 0.25rem; }
+
+  /* ===== empty / loading ===== */
+  .empty {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--muted);
+  }
+  .empty h3 {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  .loading { color: var(--muted); padding: 2rem; text-align: center; }
+
+  /* ===== modal — detail view ===== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    max-width: 960px;
+    width: 100%;
+    overflow: hidden;
+    margin: auto;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(13,14,18,0.8);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    transition: border-color 0.15s;
+  }
+  .modal-close:hover { border-color: var(--border-strong); }
+
+  .gallery {
+    position: relative;
+    background: var(--bg);
+    aspect-ratio: 16/10;
+    overflow: hidden;
+  }
+  .gallery-main {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .gallery-arrow {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    background: rgba(13,14,18,0.7);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gallery-arrow.prev { left: 1rem; }
+  .gallery-arrow.next { right: 1rem; }
+  .gallery-counter {
+    position: absolute;
+    bottom: 1rem; right: 1rem;
+    background: rgba(13,14,18,0.85);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .modal-body { padding: 1.5rem 2rem 2rem; }
+
+  .modal-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 0.25rem;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .modal-price-block { text-align: right; }
+  .modal-price-byn {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--accent);
+  }
+  .modal-price-usd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(232,255,71,0.25);
+    padding: 0.45rem 0.85rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 0.75rem;
+    transition: background 0.15s;
+  }
+  .source-link:hover { background: rgba(232,255,71,0.18); }
+
+  .specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0;
+    margin-bottom: 1.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .spec {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+  .spec:nth-child(odd) { padding-left: 0; }
+  .spec:last-child, .spec:nth-last-child(2):nth-child(odd) { border-right: none; }
+  .spec-label { font-size: 11px; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .spec-value { font-size: 14px; color: var(--text); }
+  .spec-value.num { font-family: 'JetBrains Mono', monospace; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  .price-chart-wrap {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    height: 200px;
+  }
+
+  .features-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pill {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  .description {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .dealer-info {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .dealer-info b { color: var(--text); font-weight: 600; }
+  .dealer-info span { color: var(--muted); }
+
+  /* ===== mobile ===== */
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; }
+    aside {
+      position: static;
+      max-height: none;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    main { padding: 1rem; }
+    nav { padding: 0.9rem 1rem; }
+    .modal-head { grid-template-columns: 1fr; }
+    .modal-price-block { text-align: left; }
+    .modal-body { padding: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">car<span>-</span>car.by</a>
+  <span class="total">в базе: <b class="num" id="nav-total">—</b></span>
+</nav>
+
+<div class="shell">
+
+  <aside>
+    <h3>Марка и модель</h3>
+    <div class="field">
+      <select id="f-brand">
+        <option value="">все марки</option>
+      </select>
+    </div>
+    <div class="field">
+      <select id="f-model" disabled>
+        <option value="">все модели</option>
+      </select>
+    </div>
+
+    <h3>Год</h3>
+    <div class="range">
+      <div class="field"><input class="num" id="f-year-min" placeholder="от" inputmode="numeric"></div>
+      <div class="field"><input class="num" id="f-year-max" placeholder="до" inputmode="numeric"></div>
+    </div>
+
+    <h3>Цена, $</h3>
+    <div class="range">
+      <div class="field"><input class="num" id="f-price-min" placeholder="от" inputmode="numeric"></div>
+      <div class="field"><input class="num" id="f-price-max" placeholder="до" inputmode="numeric"></div>
+    </div>
+
+    <h3>Пробег</h3>
+    <div class="field">
+      <input class="num" id="f-mileage-max" placeholder="до, км" inputmode="numeric">
+    </div>
+
+    <h3>Кузов</h3>
+    <div class="field">
+      <select id="f-body">
+        <option value="">все</option>
+      </select>
+    </div>
+
+    <h3>Двигатель</h3>
+    <div class="field">
+      <select id="f-engine">
+        <option value="">все</option>
+        <option>Бензин</option>
+        <option>Дизель</option>
+        <option>Газ</option>
+        <option>Гибрид</option>
+        <option>Электро</option>
+      </select>
+    </div>
+
+    <h3>Регион</h3>
+    <div class="field">
+      <select id="f-region">
+        <option value="">все</option>
+      </select>
+    </div>
+
+    <button class="reset" id="btn-reset">Сбросить фильтры</button>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <div>
+        <div class="result-count">
+          <span class="num" id="count">—</span>
+          <small id="count-suffix">объявлений</small>
+        </div>
+      </div>
+      <select class="sort-select" id="f-sort">
+        <option value="newest">сначала новые</option>
+        <option value="price_asc">сначала дешёвые</option>
+        <option value="price_desc">сначала дорогие</option>
+        <option value="year_desc">сначала свежие по году</option>
+        <option value="mileage_asc">наименьший пробег</option>
+      </select>
+    </div>
+
+    <div id="results" class="grid"></div>
+    <div id="status" class="loading">загружаем...</div>
+    <div id="pager" class="pager"></div>
+  </main>
+
+</div>
+
+<div class="modal-backdrop" id="modal-bd">
+  <div class="modal" id="modal" style="position:relative;">
+    <button class="modal-close" id="modal-close">×</button>
+    <div class="gallery" id="gallery"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ============ state ============
+const state = {
+  filters: {
+    brand: '', model: '',
+    year_min: '', year_max: '',
+    price_min: '', price_max: '',
+    mileage_max: '',
+    body_type: '', engine_type: '', region: '',
+    sort: 'newest',
+    page: 1,
+  },
+  total: 0,
+  pageSize: 24,
+};
+
+// ============ utils ============
+const $ = sel => document.querySelector(sel);
+const fmt = n => n == null ? '—' : new Intl.NumberFormat('ru-RU').format(n);
+const declension = (n, forms) => {
+  // forms: ['объявление','объявления','объявлений']
+  n = Math.abs(n) % 100;
+  const n10 = n % 10;
+  if (n > 10 && n < 20) return forms[2];
+  if (n10 > 1 && n10 < 5) return forms[1];
+  if (n10 === 1) return forms[0];
+  return forms[2];
+};
+
+function buildQuery() {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(state.filters)) {
+    if (v !== '' && v != null) p.set(k, v);
+  }
+  p.set('page_size', state.pageSize);
+  return p.toString();
+}
+
+// ============ api ============
+async function fetchStats() {
+  const r = await fetch('/api/stats').then(r => r.json()).catch(() => null);
+  if (r) $('#nav-total').textContent = fmt(r.active);
+}
+
+async function fetchBrands() {
+  const brands = await fetch('/api/brands').then(r => r.json());
+  const sel = $('#f-brand');
+  for (const b of brands) {
+    const o = document.createElement('option');
+    o.value = b.brand;
+    o.textContent = `${b.brand} (${b.cnt})`;
+    sel.appendChild(o);
+  }
+}
+
+async function fetchModels(brand) {
+  const sel = $('#f-model');
+  sel.innerHTML = '<option value="">все модели</option>';
+  if (!brand) { sel.disabled = true; return; }
+  const models = await fetch('/api/models?brand=' + encodeURIComponent(brand)).then(r => r.json());
+  for (const m of models) {
+    const o = document.createElement('option');
+    o.value = m.model;
+    o.textContent = `${m.model} (${m.cnt})`;
+    sel.appendChild(o);
+  }
+  sel.disabled = false;
+}
+
+async function fetchResults() {
+  $('#status').textContent = 'загружаем…';
+  $('#status').style.display = 'block';
+  $('#results').innerHTML = '';
+  $('#pager').innerHTML = '';
+
+  const data = await fetch('/api/cars?' + buildQuery()).then(r => r.json());
+  state.total = data.total;
+  renderToolbar(data.total);
+
+  if (!data.items.length) {
+    $('#status').style.display = 'none';
+    $('#results').innerHTML = '<div class="empty"><h3>Ничего не нашли</h3><div>Попробуйте ослабить фильтры или сбросить их.</div></div>';
+    return;
+  }
+
+  $('#status').style.display = 'none';
+  $('#results').innerHTML = data.items.map(carCard).join('');
+  renderPager(data.total, data.page);
+
+  // bind clicks
+  document.querySelectorAll('[data-car-id]').forEach(el => {
+    el.addEventListener('click', () => openDetail(+el.dataset.carId));
+  });
+}
+
+// ============ render ============
+function renderToolbar(total) {
+  $('#count').textContent = fmt(total);
+  $('#count-suffix').textContent = declension(total, ['объявление','объявления','объявлений']);
+}
+
+function carCard(c) {
+  const title = [c.brand, c.model, c.generation].filter(Boolean).join(' ');
+  const specs = [
+    c.year != null ? `<span class="num">${c.year}</span> г.` : null,
+    c.mileage_km != null ? `<span class="num">${fmt(c.mileage_km)}</span> км` : null,
+    c.body_type,
+  ].filter(Boolean).join(' · ');
+  const region = [c.city, c.region].filter(Boolean).filter((x,i,a) => a.indexOf(x)===i).join(', ');
+  const thumb = c.thumb
+    ? `<div class="card-img" style="background-image:url('${c.thumb}')"><span class="card-source">${c.source}</span></div>`
+    : `<div class="card-img empty">нет фото<span class="card-source">${c.source}</span></div>`;
+  return `
+    <div class="card" data-car-id="${c.id}">
+      ${thumb}
+      <div class="card-body">
+        <div class="card-title">${escape(title) || 'Без названия'}</div>
+        <div class="card-specs">${specs || '—'}</div>
+        <div class="card-bottom">
+          <span class="card-price">${c.price_usd != null ? fmt(c.price_usd) + ' $' : '—'}</span>
+          <span class="card-region">${escape(region)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPager(total, current) {
+  const totalPages = Math.ceil(total / state.pageSize);
+  if (totalPages <= 1) { $('#pager').innerHTML = ''; return; }
+
+  const btns = [];
+  const push = (label, page, opts={}) => {
+    if (opts.gap) { btns.push('<span class="gap">…</span>'); return; }
+    const cls = page === current ? 'active' : '';
+    const dis = opts.disabled ? 'disabled' : '';
+    btns.push(`<button class="${cls}" ${dis} data-page="${page}">${label}</button>`);
+  };
+
+  push('‹', current - 1, { disabled: current === 1 });
+
+  const window_ = 2;
+  const pages = new Set([1, totalPages, current]);
+  for (let i = current - window_; i <= current + window_; i++) {
+    if (i > 0 && i <= totalPages) pages.add(i);
+  }
+  const sorted = [...pages].sort((a,b) => a-b);
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) push(null, null, { gap: true });
+    push(p, p);
+    prev = p;
+  }
+
+  push('›', current + 1, { disabled: current === totalPages });
+
+  $('#pager').innerHTML = btns.join('');
+  document.querySelectorAll('#pager button').forEach(b => {
+    b.addEventListener('click', () => {
+      state.filters.page = +b.dataset.page;
+      fetchResults();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+function escape(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+
+// ============ filters ============
+function bindFilters() {
+  $('#f-brand').addEventListener('change', e => {
+    state.filters.brand = e.target.value;
+    state.filters.model = '';
+    state.filters.page = 1;
+    fetchModels(e.target.value);
+    fetchResults();
+  });
+  $('#f-model').addEventListener('change', e => {
+    state.filters.model = e.target.value;
+    state.filters.page = 1;
+    fetchResults();
+  });
+  $('#f-sort').addEventListener('change', e => {
+    state.filters.sort = e.target.value;
+    state.filters.page = 1;
+    fetchResults();
+  });
+
+  const debounce = (fn, ms=400) => {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  };
+  const numField = (id, key) => {
+    $(id).addEventListener('input', debounce(e => {
+      state.filters[key] = e.target.value;
+      state.filters.page = 1;
+      fetchResults();
+    }));
+  };
+  numField('#f-year-min', 'year_min');
+  numField('#f-year-max', 'year_max');
+  numField('#f-price-min', 'price_min');
+  numField('#f-price-max', 'price_max');
+  numField('#f-mileage-max', 'mileage_max');
+
+  const textField = (id, key) => {
+    $(id).addEventListener('change', e => {
+      state.filters[key] = e.target.value;
+      state.filters.page = 1;
+      fetchResults();
+    });
+  };
+  textField('#f-body', 'body_type');
+  textField('#f-engine', 'engine_type');
+  textField('#f-region', 'region');
+
+  $('#btn-reset').addEventListener('click', () => {
+    for (const k of Object.keys(state.filters)) {
+      if (k === 'sort') state.filters[k] = 'newest';
+      else if (k === 'page') state.filters[k] = 1;
+      else state.filters[k] = '';
+    }
+    document.querySelectorAll('aside select, aside input').forEach(el => {
+      if (el.tagName === 'INPUT') el.value = '';
+      else el.value = '';
+    });
+    $('#f-model').disabled = true;
+    $('#f-sort').value = 'newest';
+    fetchResults();
+  });
+}
+
+// заполнение динамических списков (body_type, region) из /api/facets
+async function loadFacets() {
+  const f = await fetch('/api/facets').then(r => r.json());
+  const fillSelect = (id, vals) => {
+    const sel = $(id);
+    for (const v of vals) {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    }
+  };
+  fillSelect('#f-body', f.body_type || []);
+  fillSelect('#f-region', f.region || []);
+}
+
+// ============ modal — detail ============
+let galleryState = { images: [], idx: 0 };
+
+async function openDetail(id) {
+  $('#modal-bd').classList.add('open');
+  $('#modal-body').innerHTML = '<div class="loading">загружаем…</div>';
+  $('#gallery').innerHTML = '';
+  document.body.style.overflow = 'hidden';
+
+  const car = await fetch('/api/cars/' + id).then(r => r.json()).catch(() => null);
+  if (!car) {
+    $('#modal-body').innerHTML = '<div class="empty"><h3>Не удалось загрузить</h3></div>';
+    return;
+  }
+
+  renderGallery(car.images || []);
+  renderDetail(car);
+}
+
+function renderGallery(images) {
+  if (!images.length) {
+    $('#gallery').innerHTML = '<div class="empty" style="padding:3rem;">нет фото</div>';
+    return;
+  }
+  galleryState = { images, idx: 0 };
+  $('#gallery').innerHTML = `
+    <img class="gallery-main" id="g-img" src="${images[0]}" alt="">
+    ${images.length > 1 ? `
+      <button class="gallery-arrow prev" id="g-prev">‹</button>
+      <button class="gallery-arrow next" id="g-next">›</button>
+      <div class="gallery-counter num"><span id="g-cnt">1</span> / ${images.length}</div>
+    ` : ''}
+  `;
+  if (images.length > 1) {
+    $('#g-prev').addEventListener('click', () => stepGallery(-1));
+    $('#g-next').addEventListener('click', () => stepGallery(1));
+  }
+}
+
+function stepGallery(dir) {
+  const n = galleryState.images.length;
+  galleryState.idx = (galleryState.idx + dir + n) % n;
+  $('#g-img').src = galleryState.images[galleryState.idx];
+  $('#g-cnt').textContent = galleryState.idx + 1;
+}
+
+function renderDetail(c) {
+  const title = [c.brand, c.model, c.generation].filter(Boolean).join(' ');
+  const sub = [
+    c.year != null ? c.year + ' г.' : null,
+    c.body_type, c.engine_type, c.capacity_l,
+  ].filter(Boolean).join(' · ');
+
+  const specs = [
+    ['Год',        c.year, true],
+    ['Пробег',     c.mileage_km != null ? fmt(c.mileage_km) + ' км' : null, true],
+    ['Двигатель',  [c.engine_type, c.capacity_l].filter(Boolean).join(', ')],
+    ['Мощность',   c.power_hp ? c.power_hp + ' л.с.' : null, true],
+    ['Коробка',    [c.gearbox, c.auto_gearbox].filter(Boolean).join(' · ')],
+    ['Привод',     c.drive],
+    ['Цвет',       c.color],
+    ['Салон',      [c.interior_color, c.interior_material].filter(Boolean).join(', ')],
+    ['Состояние',  c.condition],
+    ['VIN',        c.vin, true],
+  ].filter(([_, v]) => v != null && v !== '');
+
+  const featurePills = (c.features || []).concat(c.lights || []).map(
+    f => `<span class="pill">${escape(f)}</span>`
+  ).join('');
+
+  // дилер
+  const dealerBlock = c.dealer ? `
+    <div class="section-title">Продавец</div>
+    <div class="dealer-info">
+      <b>${escape(c.dealer.company || c.seller || '')}</b><br>
+      ${c.dealer.contact_person ? `<span>Контакт:</span> ${escape(c.dealer.contact_person)}<br>` : ''}
+      ${c.dealer.company_address ? `<span>Адрес:</span> ${escape(c.dealer.company_address)}<br>` : ''}
+      ${c.dealer.company_unp ? `<span>УНП:</span> <span class="num">${escape(c.dealer.company_unp)}</span>` : ''}
+    </div>
+  ` : (c.seller ? `
+    <div class="section-title">Продавец</div>
+    <div class="dealer-info"><b>${escape(c.seller)}</b> ${c.is_company ? '' : '<span>(частное лицо)</span>'}</div>
+  ` : '');
+
+  $('#modal-body').innerHTML = `
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">${escape(title)}</div>
+        <div class="modal-subtitle">${escape(sub)}</div>
+        <a href="${c.url}" target="_blank" rel="noopener" class="source-link">
+          Открыть на ${c.source || 'kufar'} →
+        </a>
+      </div>
+      <div class="modal-price-block">
+        <div class="modal-price-byn">${c.price_byn != null ? fmt(c.price_byn) + ' р.' : '—'}</div>
+        <div class="modal-price-usd">${c.price_usd != null ? '≈ ' + fmt(c.price_usd) + ' $' : ''}</div>
+      </div>
+    </div>
+
+    <div class="specs-grid">
+      ${specs.map(([k, v, num]) => `
+        <div class="spec">
+          <div class="spec-label">${k}</div>
+          <div class="spec-value ${num ? 'num' : ''}">${escape(v)}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    ${(c.price_history && c.price_history.length > 1) ? `
+      <div class="section-title">История цены</div>
+      <div class="price-chart-wrap">
+        <canvas id="price-chart"></canvas>
+      </div>
+    ` : ''}
+
+    ${featurePills ? `
+      <div class="section-title">Комплектация</div>
+      <div class="features-list">${featurePills}</div>
+    ` : ''}
+
+    ${c.description ? `
+      <div class="section-title">Описание</div>
+      <div class="description">${escape(c.description)}</div>
+    ` : ''}
+
+    ${dealerBlock}
+  `;
+
+  if (c.price_history && c.price_history.length > 1) {
+    setTimeout(() => renderPriceChart(c.price_history), 0);
+  }
+}
+
+function renderPriceChart(history) {
+  const ctx = document.getElementById('price-chart');
+  if (!ctx) return;
+  const labels = history.map(h => new Date(h.checked_at).toLocaleDateString('ru-BY', {day:'numeric',month:'short'}));
+  const data = history.map(h => h.price_usd);
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: '#E8FF47',
+        backgroundColor: 'rgba(232,255,71,0.08)',
+        borderWidth: 2,
+        tension: 0.25,
+        fill: true,
+        pointBackgroundColor: '#E8FF47',
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => fmt(c.parsed.y) + ' $' }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#8A8B96', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: {
+          ticks: {
+            color: '#8A8B96',
+            font: { family: 'JetBrains Mono' },
+            callback: v => fmt(v) + ' $',
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+        },
+      },
+    },
+  });
+}
+
+// close modal
+$('#modal-close').addEventListener('click', closeModal);
+$('#modal-bd').addEventListener('click', e => { if (e.target.id === 'modal-bd') closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ($('#modal-bd').classList.contains('open')) {
+    if (e.key === 'ArrowLeft' && galleryState.images.length > 1) stepGallery(-1);
+    if (e.key === 'ArrowRight' && galleryState.images.length > 1) stepGallery(1);
+  }
+});
+
+function closeModal() {
+  $('#modal-bd').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ============ init ============
+(async function init() {
+  bindFilters();
+  await fetchStats();
+  await fetchBrands();
+  await loadFacets();
+  await fetchResults();
+})();
+</script>
+
+</body>
+</html>
