@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS cars (
     -- локация
     region          TEXT,
     city            TEXT,
+    district        TEXT,                          -- район города (для Минска)
 
     -- продавец
     account_id      TEXT,                          -- FK в dealers
@@ -171,6 +172,17 @@ def _migrate(con: sqlite3.Connection) -> None:
     # 2026-06-20: contact_person в dealers (отдельно от company)
     if not has_column("dealers", "contact_person"):
         con.execute("ALTER TABLE dealers ADD COLUMN contact_person TEXT")
+
+    # 2026-06-21: district в cars. Раньше для Минска в city лежал район
+    # ('Октябрьский'), т.к. kufar отдаёт area=район для города-региона.
+    # Добавляем колонку и бэкофиллим: переносим район в district, city='Минск'.
+    # Гард на наличие колонки делает бэкофилл одноразовым.
+    if not has_column("cars", "district"):
+        con.execute("ALTER TABLE cars ADD COLUMN district TEXT")
+        con.execute(
+            "UPDATE cars SET district=city, city='Минск' "
+            "WHERE region='Минск' AND city IS NOT NULL AND city<>'Минск'"
+        )
 
 
 if __name__ == "__main__":

@@ -394,6 +394,11 @@
     font-size: 13px;
     color: var(--muted);
   }
+  .modal-meta {
+    font-size: 12.5px;
+    color: var(--muted2);
+    margin-top: 4px;
+  }
   .modal-price-block { text-align: right; }
   .modal-price-byn {
     font-family: 'JetBrains Mono', monospace;
@@ -464,6 +469,13 @@
 
   .features-list {
     display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .feature-group { margin-bottom: 0.85rem; }
+  .feature-group:last-child { margin-bottom: 0; }
+  .feature-group-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
   }
   .pill {
     background: var(--bg3);
@@ -721,7 +733,7 @@ function carCard(c) {
     c.mileage_km != null ? `<span class="num">${fmt(c.mileage_km)}</span> км` : null,
     c.body_type,
   ].filter(Boolean).join(' · ');
-  const region = [c.city, c.region].filter(Boolean).filter((x,i,a) => a.indexOf(x)===i).join(', ');
+  const region = [c.city, c.district].filter(Boolean).join(', ') || c.region || '';
   const thumb = c.thumb
     ? `<div class="card-img" style="background-image:url('${c.thumb}')"><span class="card-source">${c.source}</span></div>`
     : `<div class="card-img empty">нет фото<span class="card-source">${c.source}</span></div>`;
@@ -910,12 +922,71 @@ function stepGallery(dir) {
   $('#g-cnt').textContent = galleryState.idx + 1;
 }
 
+// опции-флаги kufar (булевы) → подпись + категория. Показываем только включённые.
+const BOOL_FEATURES = [
+  ['has_climate',      'Климат-контроль',       'Комфорт'],
+  ['has_seatwarmer',   'Подогрев сидений',      'Комфорт'],
+  ['has_cruise',       'Круиз-контроль',        'Комфорт'],
+  ['has_sunroof',      'Люк / панорама',        'Комфорт'],
+  ['has_abs',          'ABS / ESP / ASR',       'Безопасность'],
+  ['has_parktronic',   'Парктроник / камера',   'Безопасность'],
+  ['has_alarm',        'Защита от угона',       'Безопасность'],
+  ['has_navigation',   'Навигация',             'Мультимедиа'],
+  ['has_aux',          'AUX / USB / Bluetooth', 'Мультимедиа'],
+  ['has_alloy_wheels', 'Легкосплавные диски',   'Экстерьер'],
+];
+
+const CAT_ORDER = ['Комфорт', 'Безопасность', 'Мультимедиа', 'Экстерьер', 'Прочее'];
+
+// эвристика категории для свободных строк из carsFeatures
+function featureCategory(s) {
+  const t = (s || '').toLowerCase();
+  if (/(abs|esp|asr|подушк|airbag|угон|сигнал|иммобил|isofix|ремн|тормоз)/.test(t)) return 'Безопасность';
+  if (/(навиг|bluetooth|usb|aux|carplay|android|мультимед|динамик|акустик|саб|экран|монитор)/.test(t)) return 'Мультимедиа';
+  if (/(диск|тонир|фаркоп|обвес|спойлер|рейлинг|молдинг|порог|фары|фар )/.test(t)) return 'Экстерьер';
+  if (/(обогрев|подогрев|климат|кондицион|стеклоподъ|сиден|руль|руля|кресл|память|memory|ключ|доступ|багажник|зеркал|круиз|люк|панорам|подлокот|электропривод|электрорегул|вентил)/.test(t)) return 'Комфорт';
+  return 'Прочее';
+}
+
+// собирает HTML комплектации: булевы флаги + строковые features, сгруппированные
+function buildEquipment(c) {
+  const groups = {};
+  const push = (cat, label) => { (groups[cat] = groups[cat] || []).push(label); };
+
+  for (const [key, label, cat] of BOOL_FEATURES) {
+    if (c[key]) push(cat, label);
+  }
+  for (const f of (c.features || [])) {
+    if (f) push(featureCategory(f), f);
+  }
+
+  return CAT_ORDER
+    .filter(cat => groups[cat] && groups[cat].length)
+    .map(cat => `
+      <div class="feature-group">
+        <div class="feature-group-label">${cat}</div>
+        <div class="features-list">
+          ${groups[cat].map(f => `<span class="pill">${escape(f)}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+}
+
 function renderDetail(c) {
   const title = [c.brand, c.model, c.generation].filter(Boolean).join(' ');
   const sub = [
     c.year != null ? c.year + ' г.' : null,
     c.body_type, c.engine_type, c.capacity_l,
   ].filter(Boolean).join(' · ');
+
+  // локация + дата публикации — отдельной мета-строкой под подзаголовком
+  const location = [c.city, c.district].filter(Boolean).join(', ');
+  let pubDate = '';
+  if (c.published_at) {
+    const d = new Date(c.published_at);
+    if (!isNaN(d)) pubDate = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const meta = [location, pubDate].filter(Boolean).join(' · ');
 
   const specs = [
     ['Год',        c.year, true],
@@ -924,15 +995,16 @@ function renderDetail(c) {
     ['Мощность',   c.power_hp ? c.power_hp + ' л.с.' : null, true],
     ['Коробка',    [c.gearbox, c.auto_gearbox].filter(Boolean).join(' · ')],
     ['Привод',     c.drive],
+    ['Кузов',      c.body_type],
+    ['Мест',       c.seats, true],
     ['Цвет',       c.color],
     ['Салон',      [c.interior_color, c.interior_material].filter(Boolean).join(', ')],
+    ['Фары',       (c.lights || []).join(', ')],
     ['Состояние',  c.condition],
     ['VIN',        c.vin, true],
   ].filter(([_, v]) => v != null && v !== '');
 
-  const featurePills = (c.features || []).concat(c.lights || []).map(
-    f => `<span class="pill">${escape(f)}</span>`
-  ).join('');
+  const equipHtml = buildEquipment(c);
 
   // дилер
   const dealerBlock = c.dealer ? `
@@ -953,6 +1025,7 @@ function renderDetail(c) {
       <div>
         <div class="modal-title">${escape(title)}</div>
         <div class="modal-subtitle">${escape(sub)}</div>
+        ${meta ? `<div class="modal-meta">${escape(meta)}</div>` : ''}
         <a href="${c.url}" target="_blank" rel="noopener" class="source-link">
           Открыть на ${c.source || 'kufar'} →
         </a>
@@ -979,9 +1052,9 @@ function renderDetail(c) {
       </div>
     ` : ''}
 
-    ${featurePills ? `
+    ${equipHtml ? `
       <div class="section-title">Комплектация</div>
-      <div class="features-list">${featurePills}</div>
+      ${equipHtml}
     ` : ''}
 
     ${c.description ? `

@@ -180,6 +180,18 @@ def parse_ad(next_data: dict) -> dict:
 
     title = data.get("title")
 
+    # геолокация. kufar отдаёт два уровня: region (верхний) + area (нижний).
+    # Для областей это «область → город» (Брестская обл. → Брест).
+    # Но Минск — город республиканского подчинения, сам себе регион, и тогда
+    # area = РАЙОН города (Октябрьский), а не город. Разводим явно, чтобы
+    # city всегда означал город, а район жил в отдельном поле.
+    _region = _p(ap, "region") or data.get("region")
+    _area = _p(ap, "area")
+    if _region == "Минск":
+        _city, _district = "Минск", _area
+    else:
+        _city, _district = _area, None
+
     # company — публичное название компании. Только для дилерских объявлений
     # (isCompanyAd=true), у физлиц всегда None. Порядок по убыванию качества:
     #   1) trademark в adParams — бренд автосалона ('Автохаус Полоцк')
@@ -246,8 +258,9 @@ def parse_ad(next_data: dict) -> dict:
         "exchange":      flag("possibleExchange"),
 
         # локация
-        "region":        _p(ap, "region") or data.get("region"),   # область
-        "city":          _p(ap, "area"),                            # город
+        "region":        _region,    # 'Минск' или 'Брестская обл.'
+        "city":          _city,      # город (для Минска — 'Минск')
+        "district":      _district,  # район города (пока только Минск)
 
         # продавец / дилер
         # seller — что показывает kufar в самом объявлении (поле "Имя"),

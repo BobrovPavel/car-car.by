@@ -212,7 +212,7 @@ def list_cars(
     offset = (page - 1) * page_size
     rows = con.execute(f"""
         SELECT id, brand, model, generation, year, mileage_km, price_byn, price_usd,
-               region, city, body_type, engine_type, gearbox, is_active, published_at
+               region, city, district, body_type, engine_type, gearbox, is_active, published_at
         FROM cars
         {where_sql}
         ORDER BY {order_sql}
