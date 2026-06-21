@@ -523,6 +523,62 @@
     .modal-price-block { text-align: left; }
     .modal-body { padding: 1.25rem; }
   }
+
+/* ChatGPT UI improvements */
+.sidebar{padding:24px!important}
+.filters,.filter-group{margin-bottom:28px!important}
+.filter-group h3,.filter-group label{margin-bottom:12px!important}
+.range{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.range>*{min-width:0;width:100%}
+input,select{
+background:#171921!important;
+border:1px solid rgba(255,255,255,.06)!important;
+border-radius:12px!important;
+min-width:0;
+height:48px;
+padding:0 16px;
+transition:border .2s,box-shadow .2s,background .2s;
+}
+input:hover,select:hover{border-color:rgba(255,255,255,.12)!important}
+input:focus,select:focus{outline:none;border-color:#E8FF47!important;box-shadow:0 0 0 3px rgba(232,255,71,.15)}
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.22)}
+
+
+/* ChatGPT UI polish */
+.field select,.field input,input,select{
+border-radius:14px!important;
+border:1px solid rgba(255,255,255,.08)!important;
+background:#171921!important;
+transition:border-color .18s, box-shadow .18s!important;
+box-shadow:none!important;
+outline:none!important;
+}
+.field select:focus,.field input:focus,input:focus,select:focus{
+border-color:rgba(232,255,71,.65)!important;
+box-shadow:0 0 0 2px rgba(232,255,71,.14)!important;
+outline:none!important;
+}
+select{
+appearance:none;
+background-image:linear-gradient(45deg,transparent 50%,#9aa0aa 50%),linear-gradient(135deg,#9aa0aa 50%,transparent 50%);
+background-position:calc(100% - 18px) calc(50% - 2px),calc(100% - 13px) calc(50% - 2px);
+background-size:5px 5px,5px 5px;
+background-repeat:no-repeat;
+padding-right:38px!important;
+}
+select option{
+background:#171921;
+color:#eef1f5;
+}
+select option:hover,select option:checked{
+background:#2c313d;
+color:#e8ff47;
+}
+
 </style>
 </head>
 <body>
