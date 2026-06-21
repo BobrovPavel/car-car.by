@@ -17,6 +17,12 @@
       <assistant-state connection-id="1fa41657-bf9f-413d-8516-18b4806cd77c" assistant-type="PUBLIC" default-profile-name="" selected-chat-id="" availability="AVAILABLE" acknowledgement="NONE" selected="true">
         <tools />
       </assistant-state>
+      <assistant-state connection-id="5c94cf08-8024-490a-af42-08f025c730fa" assistant-type="SELECT_AI" default-profile-name="" selected-chat-id="" availability="UNAVAILABLE" acknowledgement="NONE">
+        <tools />
+      </assistant-state>
+      <assistant-state connection-id="5c94cf08-8024-490a-af42-08f025c730fa" assistant-type="PUBLIC" default-profile-name="" selected-chat-id="" availability="AVAILABLE" acknowledgement="NONE" selected="true">
+        <tools />
+      </assistant-state>
     </assistants>
     <selection-state>
       <model-selection />
@@ -38,6 +44,10 @@ WHERE id = 1073935995;
 -- 2. Закрепляем изменения на диске
 COMMIT;]]></console>
     </connection>
+    <connection id="5c94cf08-8024-490a-af42-08f025c730fa">
+      <console name="Connection 1" type="STANDARD" schema="main" session="Main" />
+      <console name="Connection 1 1" type="STANDARD" schema="main" session="Main" />
+    </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseEditorStateManager">
     <last-used-providers />
@@ -50,6 +60,7 @@ COMMIT;]]></console>
   </component>
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="1fa41657-bf9f-413d-8516-18b4806cd77c" />
+    <connection id="5c94cf08-8024-490a-af42-08f025c730fa" />
   </component>
   <component name="DBNavigator.Project.DatasetFilterManager">
     <filter-actions connection-id="1fa41657-bf9f-413d-8516-18b4806cd77c" dataset="main.cars" active-filter-id="fea945c6-4bce-4fb0-bb43-b70fb6150e13">
@@ -67,6 +78,7 @@ COMMIT;]]></console>
         <condition column="account_id" operator="=" value="243051481" active="true" />
       </filter>
     </filter-actions>
+    <filter-actions connection-id="5c94cf08-8024-490a-af42-08f025c730fa" dataset="main.cars" active-filter-id="EMPTY_FILTER" />
   </component>
   <component name="DBNavigator.Project.ExecutionManager">
     <retain-sticky-names value="false" />
@@ -98,6 +110,130 @@ COMMIT;]]></console>
           <url-parameters />
           <files>
             <file path="C:\Users\raind\PycharmProjects\car-car\cars.db" schema="main" />
+          </files>
+          <type value="NONE" />
+          <user value="" />
+          <token-type value="" />
+          <token-config-file value="" />
+          <token-profile value="" />
+          <adb-compartment-ocid value="" />
+          <adb-database-ocid value="" />
+          <azure-token-database-id-uri value="" />
+          <azure-token-tenant-id value="" />
+          <azure-token-client-id value="" />
+          <azure-token-client-certificate-file value="" />
+          <session-user value="" />
+        </database>
+        <properties>
+          <auto-commit value="false" />
+        </properties>
+        <ssh-settings>
+          <active value="false" />
+          <proxy-host value="" />
+          <proxy-port value="22" />
+          <proxy-user value="" />
+          <auth-type value="PASSWORD" />
+          <key-file value="" />
+        </ssh-settings>
+        <ssl-settings>
+          <active value="false" />
+          <certificate-authority-file value="" />
+          <client-certificate-file value="" />
+          <client-key-file value="" />
+        </ssl-settings>
+        <details>
+          <charset value="UTF-8" />
+          <session-management value="true" />
+          <ddl-file-binding value="true" />
+          <database-logging value="true" />
+          <connect-automatically value="true" />
+          <restore-workspace value="true" />
+          <restore-workspace-deep value="false" />
+          <environment-type value="default" />
+          <connectivity-timeout value="30" />
+          <idle-time-to-disconnect value="30" />
+          <idle-time-to-disconnect-pool value="5" />
+          <credential-expiry-time value="10" />
+          <max-connection-pool-size value="7" />
+          <alternative-statement-delimiter value="" />
+        </details>
+        <debugger>
+          <compile-dependencies value="true" />
+          <tcp-host-address value="" />
+          <tcp-port-from value="4000" />
+          <tcp-port-to value="4999" />
+          <jdwp-tunnel-type value="NONE" />
+          <debugger-type value="JDBC" />
+          <reverse-ssh-tunnel>
+            <host value="" />
+            <port value="22" />
+            <bind-host value="127.0.0.1" />
+            <bind-port value="0" />
+            <auth-type value="PASSWORD" />
+            <user value="" />
+            <key-file value="" />
+          </reverse-ssh-tunnel>
+        </debugger>
+        <object-filters hide-empty-schemas="false" hide-pseudo-columns="false" hide-audit-columns="false">
+          <object-filters />
+          <object-type-filter use-master-settings="true">
+            <object-type name="SCHEMA" enabled="true" />
+            <object-type name="USER" enabled="true" />
+            <object-type name="ROLE" enabled="true" />
+            <object-type name="PRIVILEGE" enabled="true" />
+            <object-type name="CHARSET" enabled="true" />
+            <object-type name="TABLE" enabled="true" />
+            <object-type name="VIEW" enabled="true" />
+            <object-type name="JSON_VIEW" enabled="true" />
+            <object-type name="MATERIALIZED_VIEW" enabled="true" />
+            <object-type name="NESTED_TABLE" enabled="true" />
+            <object-type name="COLUMN" enabled="true" />
+            <object-type name="INDEX" enabled="true" />
+            <object-type name="CONSTRAINT" enabled="true" />
+            <object-type name="DATASET_TRIGGER" enabled="true" />
+            <object-type name="DATABASE_TRIGGER" enabled="true" />
+            <object-type name="SYNONYM" enabled="true" />
+            <object-type name="SEQUENCE" enabled="true" />
+            <object-type name="PROCEDURE" enabled="true" />
+            <object-type name="FUNCTION" enabled="true" />
+            <object-type name="PACKAGE" enabled="true" />
+            <object-type name="TYPE" enabled="true" />
+            <object-type name="TYPE_ATTRIBUTE" enabled="true" />
+            <object-type name="ARGUMENT" enabled="true" />
+            <object-type name="JAVA_CLASS" enabled="true" />
+            <object-type name="JAVA_FIELD" enabled="true" />
+            <object-type name="JAVA_METHOD" enabled="true" />
+            <object-type name="JAVA_RESOURCE" enabled="true" />
+            <object-type name="DIMENSION" enabled="true" />
+            <object-type name="CLUSTER" enabled="true" />
+            <object-type name="DBLINK" enabled="true" />
+            <object-type name="CREDENTIAL" enabled="true" />
+            <object-type name="AI_PROFILE" enabled="true" />
+            <object-type name="AI_MODEL" enabled="true" />
+          </object-type-filter>
+        </object-filters>
+      </connection>
+      <connection source-id="" id="5c94cf08-8024-490a-af42-08f025c730fa" active="true" signed="true">
+        <database>
+          <name value="Connection 1" />
+          <description value="" />
+          <database-type value="SQLITE" />
+          <config-type value="BASIC" />
+          <database-version value="3.5" />
+          <driver-source value="BUNDLED" />
+          <driver-library value="" />
+          <driver value="" />
+          <url-type value="FILE" />
+          <host value="" />
+          <port value="" />
+          <database value="" />
+          <tns-folder value="" />
+          <tns-profile value="" />
+          <server-type value="" />
+          <protocol value="" />
+          <url-parameters />
+          <files>
+            <file path="C:\Users\raind\PycharmProjects\car-car\cars_listing.db" schema="main" />
           </files>
           <type value="NONE" />
           <user value="" />
