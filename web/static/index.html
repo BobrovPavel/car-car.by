@@ -430,6 +430,41 @@
   }
   .source-link:hover { background: rgba(232,255,71,0.18); }
 
+  /* limited gallery: 5 photos + a CTA slide pointing to the original */
+  .gallery .hide { display: none !important; }
+  .gallery-cta {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg2);
+    text-decoration: none; color: var(--text);
+    overflow: hidden;
+  }
+  .gallery-cta-bg {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    filter: blur(16px) brightness(0.4);
+    transform: scale(1.15);            /* scale up to hide blurred transparent edges */
+    z-index: 0;
+  }
+  .gallery-cta-inner { position: relative; z-index: 1; text-align: center; padding: 2rem; }
+  .gallery-cta-count {
+    font-size: 2.5rem; font-weight: 700; color: var(--accent); line-height: 1;
+  }
+  .gallery-cta-inner > div:nth-child(2) { color: var(--muted); margin-top: 0.5rem; }
+  .gallery-cta-btn {
+    display: inline-block; margin-top: 1.1rem;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid rgba(232,255,71,0.25);
+    padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; font-size: 13px;
+  }
+
+  /* truncated description -> read full on the original site */
+  .desc-more {
+    display: block; margin-top: 0.75rem;
+    color: var(--accent); text-decoration: none; font-weight: 500; font-size: 13px;
+  }
+  .desc-more:hover { text-decoration: underline; }
+
   .specs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -854,6 +889,16 @@ function escape(s) {
   })[c]);
 }
 
+// show only part of the description / photos; the rest lives on the source site
+// (keeps load off the platforms we aggregate from)
+const DESC_LIMIT = 250;
+const GALLERY_MAX = 5;
+function truncate(s, n) {
+  if (!s) return '';
+  s = String(s);
+  return s.length > n ? s.slice(0, n).trimEnd() + '…' : s;
+}
+
 // ============ filters ============
 function bindFilters() {
   $('#f-brand').addEventListener('change', e => {
@@ -933,7 +978,7 @@ async function loadFacets() {
 }
 
 // ============ modal — detail ============
-let galleryState = { images: [], idx: 0 };
+let galleryState = { slides: [], idx: 0, url: '#', source: 'kufar', total: 0 };
 
 async function openDetail(id) {
   $('#modal-bd').classList.add('open');
@@ -947,35 +992,64 @@ async function openDetail(id) {
     return;
   }
 
-  renderGallery(car.images || []);
+  renderGallery(car.images || [], car.url, car.source);
   renderDetail(car);
 }
 
-function renderGallery(images) {
+function renderGallery(images, url, source) {
   if (!images.length) {
     $('#gallery').innerHTML = '<div class="empty" style="padding:3rem;">нет фото</div>';
     return;
   }
-  galleryState = { images, idx: 0 };
+  source = source || 'kufar';
+  const shown = images.slice(0, GALLERY_MAX);
+  const extra = images.length - GALLERY_MAX;          // photos we deliberately don't show
+  const peek = extra > 0 ? images[GALLERY_MAX] : '';  // 6th photo -> blurred CTA background
+  // slides = up to 5 photos, plus a final CTA slide when the ad has more
+  const slides = shown.map(src => ({ type: 'img', src }));
+  if (extra > 0) slides.push({ type: 'cta' });
+
+  galleryState = { slides, idx: 0, url: url || '#', source, total: images.length };
+
   $('#gallery').innerHTML = `
-    <img class="gallery-main" id="g-img" src="${images[0]}" alt="">
-    ${images.length > 1 ? `
+    <img class="gallery-main" id="g-img" src="${shown[0]}" alt="">
+    <a class="gallery-cta hide" id="g-cta" href="${url || '#'}" target="_blank" rel="noopener">
+      <div class="gallery-cta-bg" style="background-image:url('${peek}')"></div>
+      <div class="gallery-cta-inner">
+        <div class="gallery-cta-count num">+${extra > 0 ? extra : 0}</div>
+        <div>Ещё ${extra > 0 ? extra : 0} фото — смотреть на ${source}</div>
+        <div class="gallery-cta-btn">Открыть оригинал →</div>
+      </div>
+    </a>
+    ${slides.length > 1 ? `
       <button class="gallery-arrow prev" id="g-prev">‹</button>
       <button class="gallery-arrow next" id="g-next">›</button>
-      <div class="gallery-counter num"><span id="g-cnt">1</span> / ${images.length}</div>
+      <div class="gallery-counter num" id="g-counter"><span id="g-cnt">1</span> / ${images.length}</div>
     ` : ''}
   `;
-  if (images.length > 1) {
+  if (slides.length > 1) {
     $('#g-prev').addEventListener('click', () => stepGallery(-1));
     $('#g-next').addEventListener('click', () => stepGallery(1));
   }
 }
 
+function drawSlide() {
+  const s = galleryState.slides[galleryState.idx];
+  const img = $('#g-img'), cta = $('#g-cta'), cnt = $('#g-cnt'), counter = $('#g-counter');
+  const isCta = s.type === 'cta';
+  img.classList.toggle('hide', isCta);                 // .gallery-main is display:block -> toggle a class
+  cta.classList.toggle('hide', !isCta);
+  if (counter) counter.classList.toggle('hide', isCta); // hide "N / total" on the CTA slide
+  if (!isCta) {
+    img.src = s.src;
+    if (cnt) cnt.textContent = galleryState.idx + 1;     // numerator = real photo position (1..5)
+  }
+}
+
 function stepGallery(dir) {
-  const n = galleryState.images.length;
+  const n = galleryState.slides.length;
   galleryState.idx = (galleryState.idx + dir + n) % n;
-  $('#g-img').src = galleryState.images[galleryState.idx];
-  $('#g-cnt').textContent = galleryState.idx + 1;
+  drawSlide();
 }
 
 // опции-флаги kufar (булевы) → подпись + категория. Показываем только включённые.
@@ -1115,7 +1189,9 @@ function renderDetail(c) {
 
     ${c.description ? `
       <div class="section-title">Описание</div>
-      <div class="description">${escape(c.description)}</div>
+      <div class="description">${escape(truncate(c.description, DESC_LIMIT))}${String(c.description).length > DESC_LIMIT
+        ? `<a href="${c.url}" target="_blank" rel="noopener" class="desc-more">Читать полностью на ${c.source || 'kufar'} →</a>`
+        : ''}</div>
     ` : ''}
 
     ${dealerBlock}
@@ -1175,8 +1251,8 @@ $('#modal-bd').addEventListener('click', e => { if (e.target.id === 'modal-bd') 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
   if ($('#modal-bd').classList.contains('open')) {
-    if (e.key === 'ArrowLeft' && galleryState.images.length > 1) stepGallery(-1);
-    if (e.key === 'ArrowRight' && galleryState.images.length > 1) stepGallery(1);
+    if (e.key === 'ArrowLeft' && galleryState.slides.length > 1) stepGallery(-1);
+    if (e.key === 'ArrowRight' && galleryState.slides.length > 1) stepGallery(1);
   }
 });
 
