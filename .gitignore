@@ -4,6 +4,10 @@ __pycache__/
 \__pycache__\
 *.py[codz]
 *$py.class
+*.pyc
+*.db
+*.db-shm
+*.db-wal
 .idea
 .\.idea\
 .idea\
@@ -11,7 +15,6 @@ __pycache__/
 .idea/dbnavigator.xml
 # C extensions
 *.so
-*.db
 __pycache__
 # Distribution / packaging
 .Python
