@@ -735,6 +735,11 @@ const state = {
 // ============ utils ============
 const $ = sel => document.querySelector(sel);
 const fmt = n => n == null ? '—' : new Intl.NumberFormat('ru-RU').format(n);
+
+// human-readable names for sources; add new ones here (abw.by, onliner...)
+const SOURCE_LABELS = { kufar: 'Kufar', av: 'av.by' };
+const srcLabel = s => SOURCE_LABELS[s] || s || 'Kufar';
+
 const declension = (n, forms) => {
   // forms: ['объявление','объявления','объявлений']
   n = Math.abs(n) % 100;
@@ -807,7 +812,7 @@ async function fetchResults() {
 
   // bind clicks
   document.querySelectorAll('[data-car-id]').forEach(el => {
-    el.addEventListener('click', () => openDetail(+el.dataset.carId));
+    el.addEventListener('click', () => openDetail(+el.dataset.carId, el.dataset.source));
   });
 }
 
@@ -826,10 +831,10 @@ function carCard(c) {
   ].filter(Boolean).join(' · ');
   const region = [c.city, c.district].filter(Boolean).join(', ') || c.region || '';
   const thumb = c.thumb
-    ? `<div class="card-img" style="background-image:url('${c.thumb}')"><span class="card-source">${c.source}</span></div>`
-    : `<div class="card-img empty">нет фото<span class="card-source">${c.source}</span></div>`;
+    ? `<div class="card-img" style="background-image:url('${c.thumb}')"><span class="card-source">${srcLabel(c.source)}</span></div>`
+    : `<div class="card-img empty">нет фото<span class="card-source">${srcLabel(c.source)}</span></div>`;
   return `
-    <div class="card" data-car-id="${c.id}">
+    <div class="card" data-car-id="${c.id}" data-source="${c.source || 'kufar'}">
       ${thumb}
       <div class="card-body">
         <div class="card-title">${escape(title) || 'Без названия'}</div>
@@ -980,13 +985,14 @@ async function loadFacets() {
 // ============ modal — detail ============
 let galleryState = { slides: [], idx: 0, url: '#', source: 'kufar', total: 0 };
 
-async function openDetail(id) {
+async function openDetail(id, source) {
   $('#modal-bd').classList.add('open');
   $('#modal-body').innerHTML = '<div class="loading">загружаем…</div>';
   $('#gallery').innerHTML = '';
   document.body.style.overflow = 'hidden';
 
-  const car = await fetch('/api/cars/' + id).then(r => r.json()).catch(() => null);
+  const qs = '?source=' + encodeURIComponent(source || 'kufar');
+  const car = await fetch('/api/cars/' + id + qs).then(r => r.json()).catch(() => null);
   if (!car) {
     $('#modal-body').innerHTML = '<div class="empty"><h3>Не удалось загрузить</h3></div>';
     return;
@@ -1017,7 +1023,7 @@ function renderGallery(images, url, source) {
       <div class="gallery-cta-bg" style="background-image:url('${peek}')"></div>
       <div class="gallery-cta-inner">
         <div class="gallery-cta-count num">+${extra > 0 ? extra : 0}</div>
-        <div>Ещё ${extra > 0 ? extra : 0} фото — смотреть на ${source}</div>
+        <div>Ещё ${extra > 0 ? extra : 0} фото — смотреть на ${srcLabel(source)}</div>
         <div class="gallery-cta-btn">Открыть оригинал →</div>
       </div>
     </a>
@@ -1157,7 +1163,7 @@ function renderDetail(c) {
         <div class="modal-subtitle">${escape(sub)}</div>
         ${meta ? `<div class="modal-meta">${escape(meta)}</div>` : ''}
         <a href="${c.url}" target="_blank" rel="noopener" class="source-link">
-          Открыть на ${c.source || 'kufar'} →
+          Открыть на ${srcLabel(c.source)} →
         </a>
       </div>
       <div class="modal-price-block">
@@ -1190,7 +1196,7 @@ function renderDetail(c) {
     ${c.description ? `
       <div class="section-title">Описание</div>
       <div class="description">${escape(truncate(c.description, DESC_LIMIT))}${String(c.description).length > DESC_LIMIT
-        ? `<a href="${c.url}" target="_blank" rel="noopener" class="desc-more">Читать полностью на ${c.source || 'kufar'} →</a>`
+        ? `<a href="${c.url}" target="_blank" rel="noopener" class="desc-more">Читать полностью на ${srcLabel(c.source)} →</a>`
         : ''}</div>
     ` : ''}
 
