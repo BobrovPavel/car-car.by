@@ -22,8 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from db import init_db
-from collector import upsert_car, fetch_detail_safe, RateLimiter, DELAY_BETWEEN_DETAILS
+from sources.db import init_db
+from sources.kufar import upsert_car, fetch_detail_safe, RateLimiter, DELAY_BETWEEN_DETAILS
 
 
 # нормальный курс BYN/USD в 2024-2026 колеблется в районе 3.0-3.5.

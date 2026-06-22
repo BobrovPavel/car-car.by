@@ -36,8 +36,8 @@ from fastapi.staticfiles import StaticFiles
 
 # базы лежат в корне проекта (на уровень выше web/)
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "cars.db"
-AV_DB_PATH = ROOT / "cars_avby.db"
+DB_PATH = ROOT / "sources" / "cars.db"
+AV_DB_PATH = ROOT / "data" / "cars_avby.db"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(title="car-car.by API")
@@ -146,28 +146,28 @@ def stats():
 
 @app.get("/api/brands")
 def brands():
-    """Все марки с количеством активных объявлений, отсортированы по убыванию."""
+    # Brands with active-ad counts, sorted alphabetically (case-insensitive).
     con = db()
     rows = con.execute("""
         SELECT brand, COUNT(*) AS cnt
         FROM cars_all
         WHERE is_active=1 AND brand IS NOT NULL
         GROUP BY brand
-        ORDER BY cnt DESC, brand
+        ORDER BY brand COLLATE NOCASE
     """).fetchall()
     return [dict(r) for r in rows]
 
 
 @app.get("/api/models")
 def models(brand: str = Query(..., description="марка для фильтрации моделей")):
-    """Модели конкретной марки. Используется при выборе марки на фронте."""
+    # Models of a given brand, sorted alphabetically (case-insensitive).
     con = db()
     rows = con.execute("""
         SELECT model, COUNT(*) AS cnt
         FROM cars_all
         WHERE is_active=1 AND brand=? AND model IS NOT NULL
         GROUP BY model
-        ORDER BY cnt DESC, model
+        ORDER BY model COLLATE NOCASE
     """, (brand,)).fetchall()
     return [dict(r) for r in rows]
 

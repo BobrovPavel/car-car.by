@@ -1,5 +1,5 @@
 """
-collector.py
+kufar.py
 Сборщик объявлений kufar.by в cars.db.
 
 Логика:
@@ -12,9 +12,9 @@ collector.py
      иначе мы пометим как мёртвое всё, до чего просто не дошли.
 
 Запуск:
-    python collector.py              # тест: первая страница (~100 объявлений)
-    python collector.py --max 500    # ограничение по числу обработанных ID
-    python collector.py --full       # полный прогон ~43k (≈6 часов при 0.5 сек)
+    python kufar.py              # тест: первая страница (~100 объявлений)
+    python kufar.py --max 500    # ограничение по числу обработанных ID
+    python kufar.py --full       # полный прогон ~43k (≈6 часов при 0.5 сек)
 
 Прерывание Ctrl+C — безопасно, всё закоммичено до этой точки сохраняется.
 При следующем запуске сборщик пройдёт листинг заново и пропустит свежие
@@ -30,8 +30,8 @@ from datetime import datetime, timezone
 
 import requests
 
-from db import init_db
-from kufar_detail_parser import fetch_next_data, parse_ad
+from sources.db import init_db
+from sources.kufar_detail_parser import fetch_next_data, parse_ad
 
 # ===== настройки =====
 LISTING_URL = "https://cre-api.kufar.by/ads-search/v1/engine/v1/search/rendered-paginated"

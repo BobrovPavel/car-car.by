@@ -1,5 +1,5 @@
 """
-av_listing.py
+avby.py
 av.by used-car listing collector for car-car.by.
 
 Pulls every used-car advert from av.by via the JSON listing endpoint and writes
@@ -42,10 +42,10 @@ count) we fall back to per-model segmentation, taking model ids from the filters
 Usage
 -----
     pip install curl_cffi
-    python av_listing.py                # full crawl -> cars_avby.db
-    python av_listing.py --test         # only Acura, for a quick smoke test
-    python av_listing.py --brand 6      # only one brand id (e.g. Audi)
-    python av_listing.py --db other.db  # custom output path
+    python avby.py                # full crawl -> cars_avby.db
+    python avby.py --test         # only Acura, for a quick smoke test
+    python avby.py --brand 6      # only one brand id (e.g. Audi)
+    python avby.py --db other.db  # custom output path
 
 Ctrl+C is safe: progress is committed after every brand.
 """
@@ -66,7 +66,7 @@ except ImportError:  # pragma: no cover
 
 # db.py lives next to this script in the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from db import init_db  # noqa: E402
+from sources.db import init_db  # noqa: E402
 
 API = "https://web-api.av.by"
 APPLY_URL = f"{API}/offer-types/cars/filters/main/apply"
@@ -569,7 +569,7 @@ def run(db_path: Path, only_brand: int | None, test: bool, restart: bool,
         print(f"\n{len(failed)} brand(s) did not finish: {names}")
         print("Re-run just those (idempotent, fills the gaps):")
         for b, label in failed:
-            print(f"    python av_listing.py --brand {b}    # {label}")
+            print(f"    python avby.py --brand {b}    # {label}")
         print(f"(brand ids: {ids})")
 
     if test:
