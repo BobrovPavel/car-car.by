@@ -8,12 +8,14 @@ FastAPI бэкенд для car-car.by.
 Открыть http://127.0.0.1:8000
 
 Источники данных:
-    cars.db        — kufar (основная база)
-    cars_avby.db   — av.by (отдельная база, та же схema, source='av')
+    cars.db          — kufar (основная база)
+    cars_avby.db     — av.by    (отдельная база, та же схема, source='av')
+    cars_onliner.db  — onliner  (отдельная база, та же схема, source='onliner')
 
-av.by-база подключается через ATTACH и объединяется с основной во временном
-представлении cars_all (UNION ALL с литеральной колонкой source). Если файла
-cars_avby.db ещё нет, API работает как раньше — только по kufar.
+Базы источников подключаются через ATTACH (см. EXTRA_SOURCES) и объединяются с
+основной во временном представлении cars_all (UNION ALL с литеральной колонкой
+source). Если файла какого-то источника ещё нет, API мягко деградирует и
+работает по доступным (как минимум по kufar).
 
 Эндпоинты:
     GET /              — статический фронт (web/static/index.html)
@@ -38,6 +40,14 @@ from fastapi.staticfiles import StaticFiles
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "sources" / "cars.db"
 AV_DB_PATH = ROOT / "data" / "cars_avby.db"
+ONLINER_DB_PATH = ROOT / "sources" / "cars_onliner.db"
+
+# источники сверх kufar (main): alias -> файл базы. Порядок задаёт порядок UNION.
+# Если файла нет на диске — источник просто пропускается (мягкая деградация).
+EXTRA_SOURCES = [
+    ("av", AV_DB_PATH),
+    ("onliner", ONLINER_DB_PATH),
+]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 app = FastAPI(title="car-car.by API")
@@ -57,45 +67,44 @@ UNION_COLS = (
 # helpers
 # ============================================================
 
+def attached(con: sqlite3.Connection, alias: str) -> bool:
+    """True если база с этим alias подключена к соединению."""
+    return any(r[1] == alias for r in con.execute("PRAGMA database_list"))
+
+
 def av_attached(con: sqlite3.Connection) -> bool:
-    """True если база av.by подключена к этому соединению."""
-    return any(r[1] == "av" for r in con.execute("PRAGMA database_list"))
+    """Совместимость со старыми вызовами."""
+    return attached(con, "av")
 
 
 def db() -> sqlite3.Connection:
     """
-    Новое подключение на запрос. Подключает av.by-базу (если есть) и создаёт
-    временное представление cars_all = main.cars UNION ALL av.cars с колонкой
-    source. Все агрегатные/листинговые эндпоинты ходят в cars_all.
+    Новое подключение на запрос. Подключает все доступные базы-источники
+    (EXTRA_SOURCES) и строит временное представление
+    cars_all = main.cars UNION ALL <source>.cars с литеральной колонкой source.
+    Если файла источника нет на диске — он пропускается, API работает по
+    оставшимся (как минимум kufar). Все агрегатные/листинговые эндпоинты
+    ходят в cars_all.
     """
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
 
-    av_ok = False
-    if AV_DB_PATH.exists():
+    selects = [f"SELECT {UNION_COLS}, 'kufar' AS source FROM main.cars"]
+    for alias, path in EXTRA_SOURCES:
+        if not path.exists():
+            continue
         try:
-            con.execute("ATTACH DATABASE ? AS av", (str(AV_DB_PATH),))
-            con.execute("SELECT 1 FROM av.cars LIMIT 1")  # таблица на месте?
-            av_ok = True
+            # alias берётся из нашей константы EXTRA_SOURCES, не из ввода — безопасно
+            con.execute(f"ATTACH DATABASE ? AS {alias}", (str(path),))
+            con.execute(f"SELECT 1 FROM {alias}.cars LIMIT 1")  # таблица на месте?
+            selects.append(f"SELECT {UNION_COLS}, '{alias}' AS source FROM {alias}.cars")
         except sqlite3.Error:
             try:
-                con.execute("DETACH DATABASE av")
+                con.execute(f"DETACH DATABASE {alias}")
             except sqlite3.Error:
                 pass
 
-    if av_ok:
-        con.execute(
-            f"CREATE TEMP VIEW cars_all AS "
-            f"SELECT {UNION_COLS}, 'kufar' AS source FROM main.cars "
-            f"UNION ALL "
-            f"SELECT {UNION_COLS}, 'av' AS source FROM av.cars"
-        )
-    else:
-        con.execute(
-            f"CREATE TEMP VIEW cars_all AS "
-            f"SELECT {UNION_COLS}, 'kufar' AS source FROM main.cars"
-        )
-
+    con.execute("CREATE TEMP VIEW cars_all AS " + " UNION ALL ".join(selects))
     return con
 
 
@@ -221,7 +230,7 @@ def list_cars(
     engine_type:  Optional[str] = None,
     gearbox:      Optional[str] = None,
     is_company:   Optional[bool] = None,
-    source:       Optional[str] = Query(None, description="kufar|av — фильтр по источнику"),
+    source:       Optional[str] = Query(None, description="kufar|av|onliner — фильтр по источнику"),
     include_inactive: bool = False,
     sort:         str = Query("newest"),
     page:         int = Query(1, ge=1),
@@ -287,7 +296,7 @@ def list_cars(
     for src, ids in by_src.items():
         if not ids:
             continue
-        prefix = "av." if (src == "av" and av_attached(con)) else "main."
+        prefix = f"{src}." if (src != "kufar" and attached(con, src)) else "main."
         ph = ",".join("?" for _ in ids)
         for r in con.execute(
             f"SELECT car_id, url FROM {prefix}car_images "
@@ -309,17 +318,16 @@ def list_cars(
 # ============================================================
 
 @app.get("/api/cars/{ad_id}")
-def get_car(ad_id: int, source: str = Query("kufar", description="kufar|av")):
+def get_car(ad_id: int, source: str = Query("kufar", description="kufar|av|onliner")):
     con = db()
-    av_ready = av_attached(con)
-    prefix = "av." if (source == "av" and av_ready) else "main."
+    prefix = f"{source}." if (source != "kufar" and attached(con, source)) else "main."
 
     row = con.execute(f"SELECT * FROM {prefix}cars WHERE id=?", (ad_id,)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="not found")
 
     car = car_to_dict(row)
-    car["source"] = "av" if prefix == "av." else "kufar"
+    car["source"] = "kufar" if prefix == "main." else prefix.rstrip(".")
 
     car["images"] = [r["url"] for r in con.execute(
         f"SELECT url FROM {prefix}car_images WHERE car_id=? ORDER BY position", (ad_id,)
