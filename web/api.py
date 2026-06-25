@@ -39,7 +39,7 @@ from fastapi.staticfiles import StaticFiles
 # базы лежат в корне проекта (на уровень выше web/)
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "sources" / "cars.db"
-AV_DB_PATH = ROOT / "data" / "cars_avby.db"
+AV_DB_PATH = ROOT / "sources" / "cars_avby.db"
 ONLINER_DB_PATH = ROOT / "sources" / "cars_onliner.db"
 
 # источники сверх kufar (main): alias -> файл базы. Порядок задаёт порядок UNION.
